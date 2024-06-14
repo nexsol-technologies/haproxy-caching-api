@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  haproxy:
+    restart: always
+    image: haproxy:alpine3.19
+    ports:
+      - 8091:8080
+    volumes: 
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+
+  demo-db:
+    restart: always
+    image: postgres:15.4-alpine3.18
+    environment:
+      - POSTGRES_USER=demo
+      - POSTGRES_PASSWORD=demo
+      - POSTGRES_DB=demo
+    ports:
+      - 5499:5432      
+    volumes:
+      - ./header.sql:/docker-entrypoint-initdb.d/header.sql
+      - ./demo2.sql:/docker-entrypoint-initdb.d/demo2.sql
+      - ./AMTOVZ_CSV_WGS84/AMTOVZ_CSV_WGS84.csv:/tmp/postal.csv
+
+  demo-api:
+    restart: always
+    image: postgrest/postgrest:latest
+    environment:
+      - PGRST_DB_URI=postgres://demo:demo@demo-db:5432/demo
+      - PGRST_DB_SCHEMA=public
+      - PGRST_DB_ANON_ROLE=demo
+      - PGRST_DB_SCHEMAS=public
+      # Adding HTTP cache Header 
+      - PGRST_DB_PRE_REQUEST=custom_headers
+    ports:
+      - "3000:3000"
